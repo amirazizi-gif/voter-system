@@ -1,5 +1,5 @@
+// Use environment variable for API URL, fallback to localhost for development
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 
 export interface Voter {
   id: number
@@ -133,7 +133,5 @@ export const getLokalitiByDaerah = async (daerahs: string[]) => {
     return getUniqueValues('lokaliti')
   }
 
-  // For now, just return all lokaliti
-  // You could implement a filtered endpoint in the backend if needed
   return getUniqueValues('lokaliti')
 }
