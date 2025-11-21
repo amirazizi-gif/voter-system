@@ -7,6 +7,7 @@ import {
   fetchVoters,
   getUniqueValues,
   calculateAge,
+  getLokalitiByDaerah,
 } from '@/lib/supabase'
 import FilterPanel from '@/components/FilterPanel'
 import Statistics from '@/components/Statistics'
@@ -105,14 +106,14 @@ export default function Home() {
       })
     }
 
-    // Daerah filter
-    if (filters.daerah) {
-      filtered = filtered.filter((v) => v.daerah_mengundi === filters.daerah)
+    // Daerah filter - Multiple selection
+    if (filters.daerah && filters.daerah.length > 0) {
+      filtered = filtered.filter((v) => filters.daerah!.includes(v.daerah_mengundi))
     }
 
-    // Lokaliti filter
-    if (filters.lokaliti) {
-      filtered = filtered.filter((v) => v.lokaliti === filters.lokaliti)
+    // Lokaliti filter - Multiple selection
+    if (filters.lokaliti && filters.lokaliti.length > 0) {
+      filtered = filtered.filter((v) => filters.lokaliti!.includes(v.lokaliti))
     }
 
     // Tag filter
@@ -129,22 +130,30 @@ export default function Home() {
   }
 
   // Update lokaliti options when daerah changes
-  const handleFilterChange = (newFilters: VoterFilters) => {
+  const handleFilterChange = async (newFilters: VoterFilters) => {
     // If daerah changed, update lokaliti options
-    if (newFilters.daerah !== filters.daerah) {
-      if (newFilters.daerah) {
-        // Filter lokaliti based on selected daerah
+    if (JSON.stringify(newFilters.daerah) !== JSON.stringify(filters.daerah)) {
+      if (newFilters.daerah && newFilters.daerah.length > 0) {
+        // Filter lokaliti based on selected daerahs
         const lokalitiForDaerah = [...new Set(
           voters
-            .filter(v => v.daerah_mengundi === newFilters.daerah)
+            .filter(v => newFilters.daerah!.includes(v.daerah_mengundi))
             .map(v => v.lokaliti)
         )].sort()
         setLokalitiOptions(lokalitiForDaerah)
-        // Clear lokaliti selection when daerah changes
-        newFilters.lokaliti = ''
+        
+        // Clear lokaliti selections that are not in the new filtered list
+        if (newFilters.lokaliti && newFilters.lokaliti.length > 0) {
+          newFilters.lokaliti = newFilters.lokaliti.filter(l => 
+            lokalitiForDaerah.includes(l)
+          )
+          if (newFilters.lokaliti.length === 0) {
+            newFilters.lokaliti = undefined
+          }
+        }
       } else {
         // Reset to all lokaliti if no daerah selected
-        const allLokaliti = [...new Set(voters.map(v => v.lokaliti))].sort()
+        const allLokaliti = await getUniqueValues('lokaliti')
         setLokalitiOptions(allLokaliti)
       }
     }
@@ -152,12 +161,12 @@ export default function Home() {
     setFilters(newFilters)
   }
 
-  const resetFilters = () => {
+  const resetFilters = async () => {
     setFilters({})
     setFilteredVoters(voters)
     setCurrentPage(1)
     // Reset lokaliti to show all
-    const allLokaliti = [...new Set(voters.map(v => v.lokaliti))].sort()
+    const allLokaliti = await getUniqueValues('lokaliti')
     setLokalitiOptions(allLokaliti)
   }
 
@@ -253,6 +262,8 @@ export default function Home() {
               <div>Total Voters: {voters.length}</div>
               <div>Daerah Options: {daerahOptions.length} ({daerahOptions.slice(0, 3).join(', ')}{daerahOptions.length > 3 ? '...' : ''})</div>
               <div>Lokaliti Options: {lokalitiOptions.length}</div>
+              <div>Selected Daerah: {filters.daerah?.length || 0}</div>
+              <div>Selected Lokaliti: {filters.lokaliti?.length || 0}</div>
             </div>
           </div>
         )}

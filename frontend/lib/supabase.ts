@@ -27,8 +27,8 @@ export interface VoterFilters {
   gender?: "L" | "P" | "";
   ageGroup?: "18-30" | "30-40" | "40-55" | "55+" | "";
   specificAge?: number;
-  daerah?: string;
-  lokaliti?: string;
+  daerah?: string[];
+  lokaliti?: string[];
   tag?: "Yes" | "Unsure" | "No" | "untagged" | "";
 }
 
@@ -49,12 +49,12 @@ export const fetchVoters = async (filters: VoterFilters = {}) => {
     query = query.eq("jantina", filters.gender);
   }
 
-  if (filters.daerah) {
-    query = query.eq("daerah_mengundi", filters.daerah);
+  if (filters.daerah && filters.daerah.length > 0) {
+    query = query.in("daerah_mengundi", filters.daerah);
   }
 
-  if (filters.lokaliti) {
-    query = query.eq("lokaliti", filters.lokaliti);
+  if (filters.lokaliti && filters.lokaliti.length > 0) {
+    query = query.in("lokaliti", filters.lokaliti);
   }
 
   if (filters.tag && filters.tag !== "untagged") {
@@ -109,11 +109,15 @@ export const getUniqueValues = async <T extends UniqueColumn>(column: T) => {
 };
 
 // Get lokaliti options based on selected daerah
-export const getLokalitiByDaerah = async (daerah: string) => {
+export const getLokalitiByDaerah = async (daerahs: string[]) => {
+  if (!daerahs || daerahs.length === 0) {
+    return getUniqueValues("lokaliti");
+  }
+
   const { data, error } = await supabase
     .from("voters")
     .select("lokaliti")
-    .eq("daerah_mengundi", daerah);
+    .in("daerah_mengundi", daerahs);
 
   if (error) {
     console.error("Error fetching lokaliti:", error);

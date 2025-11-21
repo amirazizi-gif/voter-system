@@ -1,7 +1,7 @@
 'use client'
 
 import { VoterFilters } from '@/lib/supabase'
-import { ChangeEvent, FormEvent } from 'react'
+import { ChangeEvent, FormEvent, useState } from 'react'
 
 interface FilterPanelProps {
   filters: VoterFilters
@@ -20,6 +20,9 @@ export default function FilterPanel({
   daerahOptions,
   lokalitiOptions,
 }: FilterPanelProps) {
+  const [showDaerahDropdown, setShowDaerahDropdown] = useState(false)
+  const [showLokalitiDropdown, setShowLokalitiDropdown] = useState(false)
+
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -30,10 +33,37 @@ export default function FilterPanel({
     })
   }
 
+  const handleDaerahToggle = (daerah: string) => {
+    const currentDaerahs = filters.daerah || []
+    const newDaerahs = currentDaerahs.includes(daerah)
+      ? currentDaerahs.filter(d => d !== daerah)
+      : [...currentDaerahs, daerah]
+    
+    onFilterChange({
+      ...filters,
+      daerah: newDaerahs.length > 0 ? newDaerahs : undefined,
+    })
+  }
+
+  const handleLokalitiToggle = (lokaliti: string) => {
+    const currentLokalitis = filters.lokaliti || []
+    const newLokalitis = currentLokalitis.includes(lokaliti)
+      ? currentLokalitis.filter(l => l !== lokaliti)
+      : [...currentLokalitis, lokaliti]
+    
+    onFilterChange({
+      ...filters,
+      lokaliti: newLokalitis.length > 0 ? newLokalitis : undefined,
+    })
+  }
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     onSearch()
   }
+
+  const selectedDaerahCount = filters.daerah?.length || 0
+  const selectedLokalitiCount = filters.lokaliti?.length || 0
 
   return (
     <div className="card mb-6">
@@ -112,44 +142,82 @@ export default function FilterPanel({
             />
           </div>
 
-          {/* Daerah Filter */}
-          <div>
+          {/* Daerah Filter - Multi-select */}
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Daerah Mengundi
+              Daerah Mengundi {selectedDaerahCount > 0 && `(${selectedDaerahCount})`}
             </label>
-            <select
-              name="daerah"
-              value={filters.daerah || ''}
-              onChange={handleInputChange}
-              className="input-field"
+            <button
+              type="button"
+              onClick={() => setShowDaerahDropdown(!showDaerahDropdown)}
+              className="input-field text-left flex justify-between items-center"
             >
-              <option value="">All</option>
-              {daerahOptions.map((daerah) => (
-                <option key={daerah} value={daerah}>
-                  {daerah}
-                </option>
-              ))}
-            </select>
+              <span className="truncate">
+                {selectedDaerahCount === 0
+                  ? 'Select daerah...'
+                  : `${selectedDaerahCount} selected`}
+              </span>
+              <span>▼</span>
+            </button>
+            {showDaerahDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="p-2">
+                  {daerahOptions.map((daerah) => (
+                    <label
+                      key={daerah}
+                      className="flex items-center p-2 hover:bg-gray-50 cursor-pointer rounded"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={filters.daerah?.includes(daerah) || false}
+                        onChange={() => handleDaerahToggle(daerah)}
+                        className="mr-2 h-4 w-4 text-blue-600 rounded"
+                      />
+                      <span className="text-sm">{daerah}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Lokaliti Filter */}
-          <div>
+          {/* Lokaliti Filter - Multi-select */}
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Lokaliti
+              Lokaliti {selectedLokalitiCount > 0 && `(${selectedLokalitiCount})`}
             </label>
-            <select
-              name="lokaliti"
-              value={filters.lokaliti || ''}
-              onChange={handleInputChange}
-              className="input-field"
+            <button
+              type="button"
+              onClick={() => setShowLokalitiDropdown(!showLokalitiDropdown)}
+              className="input-field text-left flex justify-between items-center"
             >
-              <option value="">All</option>
-              {lokalitiOptions.map((lokaliti) => (
-                <option key={lokaliti} value={lokaliti}>
-                  {lokaliti}
-                </option>
-              ))}
-            </select>
+              <span className="truncate">
+                {selectedLokalitiCount === 0
+                  ? 'Select lokaliti...'
+                  : `${selectedLokalitiCount} selected`}
+              </span>
+              <span>▼</span>
+            </button>
+            {showLokalitiDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="p-2">
+                  {lokalitiOptions.map((lokaliti) => (
+                    <label
+                      key={lokaliti}
+                      className="flex items-center p-2 hover:bg-gray-50 cursor-pointer rounded"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={filters.lokaliti?.includes(lokaliti) || false}
+                        onChange={() => handleLokalitiToggle(lokaliti)}
+                        className="mr-2 h-4 w-4 text-blue-600 rounded"
+                      />
+                      <span className="text-sm">{lokaliti}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Tag Filter */}
