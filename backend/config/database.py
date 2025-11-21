@@ -60,7 +60,7 @@ if not SUPABASE_URL.startswith('https://'):
 # Use this only for backend operations, never expose it in frontend
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    print(f"✓ Connected to Supabase at {SUPABASE_URL}")
+    print(f"[OK] Connected to Supabase at {SUPABASE_URL}")
 except Exception as e:
     raise ConnectionError(
         f"Failed to connect to Supabase: {str(e)}\n"
