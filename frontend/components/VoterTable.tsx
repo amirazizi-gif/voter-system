@@ -1,17 +1,23 @@
 'use client'
 
-import { Voter, calculateAge, updateVoterTag } from '@/lib/supabase'
+import { Voter, calculateAge, updateVoterTag } from '@/lib/api'
 import { useState } from 'react'
 
 interface VoterTableProps {
   voters: Voter[]
   onTagUpdate: () => void
+  canUpdate?: boolean
 }
 
-export default function VoterTable({ voters, onTagUpdate }: VoterTableProps) {
+export default function VoterTable({ voters, onTagUpdate, canUpdate = true }: VoterTableProps) {
   const [updatingId, setUpdatingId] = useState<number | null>(null)
 
   const handleTagChange = async (voterId: number, newTag: string) => {
+    if (!canUpdate) {
+      alert('You do not have permission to update voter tags')
+      return
+    }
+
     setUpdatingId(voterId)
     try {
       const tagValue = newTag === '' ? null : (newTag as 'Yes' | 'Unsure' | 'No')
@@ -85,35 +91,21 @@ export default function VoterTable({ voters, onTagUpdate }: VoterTableProps) {
 
             return (
               <tr key={voter.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  {voter.bil}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  {voter.no_kp}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {voter.nama_pemilih}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  {genderDisplay}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  {age}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {voter.daerah_mengundi}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {voter.lokaliti}
-                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{voter.bil}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{voter.no_kp}</td>
+                <td className="px-4 py-3 text-sm text-gray-900">{voter.nama_pemilih}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{genderDisplay}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{age}</td>
+                <td className="px-4 py-3 text-sm text-gray-900">{voter.daerah_mengundi}</td>
+                <td className="px-4 py-3 text-sm text-gray-900">{voter.lokaliti}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm">
                   <select
                     value={voter.tag || ''}
                     onChange={(e) => handleTagChange(voter.id, e.target.value)}
-                    disabled={isUpdating}
-                    className={`px-2 py-1 border rounded text-sm ${getTagColor(
-                      voter.tag
-                    )} ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    disabled={isUpdating || !canUpdate}
+                    className={`px-2 py-1 border rounded text-sm ${getTagColor(voter.tag)} ${
+                      isUpdating || !canUpdate ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                   >
                     <option value="">--</option>
                     <option value="Yes">Yes</option>
