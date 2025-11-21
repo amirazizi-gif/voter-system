@@ -11,9 +11,9 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 # Security Configuration
-SECRET_KEY = secrets.token_urlsafe(32)  # Generate a random secret key
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))  # Read from env or generate
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 8  # Session expires after 8 hours of inactivity
+ACCESS_TOKEN_EXPIRE_HOURS = 8
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

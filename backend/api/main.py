@@ -27,7 +27,11 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://yourdomain.com"],  # Update with your frontend URL
+    allow_origins=[
+        "http://localhost:3000",           # Local development
+        "https://voter-system-ruddy.vercel.app/",  # Your production frontend
+        "https://*.vercel.app",            # All Vercel deployments
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -382,17 +386,14 @@ async def get_user_activity(
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    
+    port = int(os.environ.get("PORT", 8000))
+    
     print("\n" + "="*60)
     print("🚀 Starting Secure Voter Database API")
     print("="*60)
-    print("\n📝 Default Credentials (CHANGE IMMEDIATELY!):")
-    print("   Username: superadmin")
-    print("   Password: Admin123!")
-    print("\n⚠️  Remember to:")
-    print("   1. Change all default passwords")
-    print("   2. Update CORS origins in production")
-    print("   3. Use HTTPS in production")
-    print("   4. Set SECRET_KEY from environment variable")
-    print("\n" + "="*60 + "\n")
+    print(f"\n🌐 Running on port: {port}")
+    print("="*60 + "\n")
     
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=port)

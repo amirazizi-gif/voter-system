@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: voter-system-api
+    env: python
+    region: singapore  # Change to: oregon, frankfurt, or singapore
+    plan: free  # Change to: starter ($7/mo) for always-on
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SUPABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: SECRET_KEY
+        generateValue: true  # Auto-generate secure key
