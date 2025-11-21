@@ -29,7 +29,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",           # Local development
-        "https://voter-system-ruddy.vercel.app/",  # Your production frontend
+        "https://voter-system-ruddy.vercel.app",  # Your production frontend
         "https://*.vercel.app",            # All Vercel deployments
     ],
     allow_credentials=True,
