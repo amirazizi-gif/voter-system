@@ -15,10 +15,10 @@ def test_connection():
     print("Testing Supabase connection...")
     try:
         response = supabase.table('users').select('username').limit(1).execute()
-        print(f"✅ Connected! Found {len(response.data)} users")
+        print(f"[OK] Connected! Found {len(response.data)} users")
         return True
     except Exception as e:
-        print(f"❌ Connection failed: {e}")
+        print(f"[FAIL] Connection failed: {e}")
         return False
 
 def test_user_exists():
@@ -28,16 +28,16 @@ def test_user_exists():
         response = supabase.table('users').select('*').eq('username', 'superadmin').execute()
         if response.data:
             user = response.data[0]
-            print(f"✅ User found: {user['username']} - Role: {user['role']}")
+            print(f"[OK] User found: {user['username']} - Role: {user['role']}")
             print(f"   ID: {user['id']}")
             print(f"   Active: {user['is_active']}")
             return True
         else:
-            print("❌ Superadmin user not found in database!")
+            print("[FAIL] Superadmin user not found in database!")
             print("   Run database_schema.sql first")
             return False
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[FAIL] Error: {e}")
         return False
 
 def test_password():
@@ -54,21 +54,21 @@ def test_password():
             # Test password
             is_valid = verify_password('Admin123!', stored_hash)
             if is_valid:
-                print("✅ Password verification works!")
+                print("[OK] Password verification works!")
                 return True
             else:
-                print("❌ Password doesn't match")
+                print("[FAIL] Password doesn't match")
                 return False
         else:
-            print("❌ User not found")
+            print("[FAIL] User not found")
             return False
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[FAIL] Error: {e}")
         return False
 
 if __name__ == "__main__":
     print("="*60)
-    print("🧪 AUTHENTICATION TEST")
+    print("=== AUTHENTICATION TEST ===")
     print("="*60)
     print()
     
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     
     print("\n" + "="*60)
     if test1 and test2 and test3:
-        print("✅ ALL TESTS PASSED - Authentication should work!")
+        print("[OK] ALL TESTS PASSED - Authentication should work!")
     else:
-        print("❌ SOME TESTS FAILED - Fix issues above")
+        print("[FAIL] SOME TESTS FAILED - Fix issues above")
     print("="*60)
