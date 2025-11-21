@@ -85,7 +85,7 @@ async def get_voters(
     lokaliti: Optional[str] = None,
     dun: Optional[str] = None,
     tag: Optional[str] = None,
-    limit: int = 100,
+    limit: int = 65000,
     offset: int = 0,
     current_user: dict = Depends(get_current_user)
 ):
