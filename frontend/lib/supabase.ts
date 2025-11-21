@@ -17,6 +17,7 @@ export interface Voter {
   daerah_mengundi: string;
   kod_lokaliti: string;
   lokaliti: string;
+  dun?: string;
   tag?: "Yes" | "Unsure" | "No" | null;
   created_at?: string;
   updated_at?: string;
@@ -27,6 +28,7 @@ export interface VoterFilters {
   gender?: "L" | "P" | "";
   ageGroup?: "18-30" | "30-40" | "40-55" | "55+" | "";
   specificAge?: number;
+  dun?: string[];
   daerah?: string[];
   lokaliti?: string[];
   tag?: "Yes" | "Unsure" | "No" | "untagged" | "";
@@ -47,6 +49,10 @@ export const fetchVoters = async (filters: VoterFilters = {}) => {
 
   if (filters.gender) {
     query = query.eq("jantina", filters.gender);
+  }
+
+  if (filters.dun && filters.dun.length > 0) {
+    query = query.in("dun", filters.dun);
   }
 
   if (filters.daerah && filters.daerah.length > 0) {
@@ -83,10 +89,12 @@ export const updateVoterTag = async (
   return data;
 };
 
-type UniqueColumn = "daerah_mengundi" | "lokaliti";
+type UniqueColumn = "daerah_mengundi" | "lokaliti" | "dun";
 type ColumnResult<T extends UniqueColumn> = { [K in T]: Voter[K] };
 
-export const getUniqueValues = async <T extends UniqueColumn>(column: T) => {
+export const getUniqueValues = async <T extends UniqueColumn>(
+  column: T
+): Promise<string[]> => {
   const { data, error } = await supabase.from("voters").select(column);
 
   if (error) {
@@ -102,7 +110,9 @@ export const getUniqueValues = async <T extends UniqueColumn>(column: T) => {
     ...new Set(
       rows
         .map((item) => item[column])
-        .filter((value): value is Voter[T] => Boolean(value))
+        .filter(
+          (value): value is string => typeof value === "string" && value !== ""
+        )
     ),
   ];
   return unique.sort();

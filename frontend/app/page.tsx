@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
 import {
   Voter,
   VoterFilters,
@@ -8,132 +8,138 @@ import {
   getUniqueValues,
   calculateAge,
   getLokalitiByDaerah,
-} from "@/lib/supabase";
-import FilterPanel from "@/components/FilterPanel";
-import Statistics from "@/components/Statistics";
-import VoterTable from "@/components/VoterTable";
-import PredictiveAnalytics from "@/components/PredictiveAnalytics";
+} from '@/lib/supabase'
+import FilterPanel from '@/components/FilterPanel'
+import Statistics from '@/components/Statistics'
+import VoterTable from '@/components/VoterTable'
 
 export default function Home() {
-  const [voters, setVoters] = useState<Voter[]>([]);
-  const [filteredVoters, setFilteredVoters] = useState<Voter[]>([]);
-  const [filters, setFilters] = useState<VoterFilters>({});
-  const [loading, setLoading] = useState(true);
-  const [daerahOptions, setDaerahOptions] = useState<string[]>([]);
-  const [lokalitiOptions, setLokalitiOptions] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const itemsPerPage = 50;
+  const [voters, setVoters] = useState<Voter[]>([])
+  const [filteredVoters, setFilteredVoters] = useState<Voter[]>([])
+  const [filters, setFilters] = useState<VoterFilters>({})
+  const [loading, setLoading] = useState(true)
+  const [dunOptions, setDunOptions] = useState<string[]>([])
+  const [daerahOptions, setDaerahOptions] = useState<string[]>([])
+  const [lokalitiOptions, setLokalitiOptions] = useState<string[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 50
 
   // Load initial data
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData()
+  }, [])
 
   const loadData = async () => {
     try {
-      setLoading(true);
-
-      console.log("🔄 Starting to load data...");
-
+      setLoading(true)
+      
+      console.log('🔄 Starting to load data...')
+      
       // Load voters data
-      console.log("📊 Fetching voters...");
-      const votersData = await fetchVoters();
-      console.log(`✅ Loaded ${votersData.length} voters`);
-      setVoters(votersData);
-      setFilteredVoters(votersData);
-
+      console.log('📊 Fetching voters...')
+      const votersData = await fetchVoters()
+      console.log(`✅ Loaded ${votersData.length} voters`)
+      setVoters(votersData)
+      setFilteredVoters(votersData)
+      
       // Load filter options
-      console.log("📋 Loading Daerah options...");
-      const daerahs = await getUniqueValues("daerah_mengundi");
-      console.log("✅ Daerah options:", daerahs);
-      setDaerahOptions(daerahs);
-
-      console.log("📋 Loading Lokaliti options...");
-      const lokalitis = await getUniqueValues("lokaliti");
-      console.log(`✅ Loaded ${lokalitis.length} lokaliti options`);
-      setLokalitiOptions(lokalitis);
-
-      console.log("📊 Summary:", {
+      console.log('📋 Loading DUN options...')
+      const duns = await getUniqueValues('dun')
+      console.log('✅ DUN options:', duns)
+      setDunOptions(duns)
+      
+      console.log('📋 Loading Daerah options...')
+      const daerahs = await getUniqueValues('daerah_mengundi')
+      console.log('✅ Daerah options:', daerahs)
+      setDaerahOptions(daerahs)
+      
+      console.log('📋 Loading Lokaliti options...')
+      const lokalitis = await getUniqueValues('lokaliti')
+      console.log(`✅ Loaded ${lokalitis.length} lokaliti options`)
+      setLokalitiOptions(lokalitis)
+      
+      console.log('📊 Summary:', {
         voters: votersData.length,
+        duns: duns.length,
         daerahs: daerahs.length,
-        lokalitis: lokalitis.length,
-      });
+        lokalitis: lokalitis.length
+      })
     } catch (error) {
-      console.error("❌ Error loading data:", error);
-      alert(
-        "Error loading voter data. Please check your Supabase configuration and browser console."
-      );
+      console.error('❌ Error loading data:', error)
+      alert('Error loading voter data. Please check your Supabase configuration and browser console.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const applyFilters = () => {
-    let filtered = [...voters];
+    let filtered = [...voters]
 
     // Name filter
     if (filters.nameSearch) {
       filtered = filtered.filter((v) =>
         v.nama_pemilih.toLowerCase().includes(filters.nameSearch!.toLowerCase())
-      );
+      )
     }
 
     // Gender filter
     if (filters.gender) {
-      filtered = filtered.filter((v) => v.jantina === filters.gender);
+      filtered = filtered.filter((v) => v.jantina === filters.gender)
     }
 
     // Specific age filter
     if (filters.specificAge) {
       filtered = filtered.filter(
         (v) => calculateAge(v.tahun_lahir) === filters.specificAge
-      );
+      )
     }
 
     // Age group filter
     if (filters.ageGroup) {
       filtered = filtered.filter((v) => {
-        const age = calculateAge(v.tahun_lahir);
+        const age = calculateAge(v.tahun_lahir)
         switch (filters.ageGroup) {
-          case "18-30":
-            return age >= 18 && age <= 30;
-          case "30-40":
-            return age > 30 && age <= 40;
-          case "40-55":
-            return age > 40 && age <= 55;
-          case "55+":
-            return age > 55;
+          case '18-30':
+            return age >= 18 && age <= 30
+          case '30-40':
+            return age > 30 && age <= 40
+          case '40-55':
+            return age > 40 && age <= 55
+          case '55+':
+            return age > 55
           default:
-            return true;
+            return true
         }
-      });
+      })
+    }
+
+    // DUN filter - Multiple selection
+    if (filters.dun && filters.dun.length > 0) {
+      filtered = filtered.filter((v) => v.dun && filters.dun!.includes(v.dun))
     }
 
     // Daerah filter - Multiple selection
     if (filters.daerah && filters.daerah.length > 0) {
-      filtered = filtered.filter((v) =>
-        filters.daerah!.includes(v.daerah_mengundi)
-      );
+      filtered = filtered.filter((v) => filters.daerah!.includes(v.daerah_mengundi))
     }
 
     // Lokaliti filter - Multiple selection
     if (filters.lokaliti && filters.lokaliti.length > 0) {
-      filtered = filtered.filter((v) => filters.lokaliti!.includes(v.lokaliti));
+      filtered = filtered.filter((v) => filters.lokaliti!.includes(v.lokaliti))
     }
 
     // Tag filter
     if (filters.tag) {
-      if (filters.tag === "untagged") {
-        filtered = filtered.filter((v) => !v.tag);
+      if (filters.tag === 'untagged') {
+        filtered = filtered.filter((v) => !v.tag)
       } else {
-        filtered = filtered.filter((v) => v.tag === filters.tag);
+        filtered = filtered.filter((v) => v.tag === filters.tag)
       }
     }
 
-    setFilteredVoters(filtered);
-    setCurrentPage(1);
-  };
+    setFilteredVoters(filtered)
+    setCurrentPage(1)
+  }
 
   // Update lokaliti options when daerah changes
   const handleFilterChange = async (newFilters: VoterFilters) => {
@@ -141,72 +147,71 @@ export default function Home() {
     if (JSON.stringify(newFilters.daerah) !== JSON.stringify(filters.daerah)) {
       if (newFilters.daerah && newFilters.daerah.length > 0) {
         // Filter lokaliti based on selected daerahs
-        const lokalitiForDaerah = [
-          ...new Set(
-            voters
-              .filter((v) => newFilters.daerah!.includes(v.daerah_mengundi))
-              .map((v) => v.lokaliti)
-          ),
-        ].sort();
-        setLokalitiOptions(lokalitiForDaerah);
-
+        const lokalitiForDaerah = [...new Set(
+          voters
+            .filter(v => newFilters.daerah!.includes(v.daerah_mengundi))
+            .map(v => v.lokaliti)
+        )].sort()
+        setLokalitiOptions(lokalitiForDaerah)
+        
         // Clear lokaliti selections that are not in the new filtered list
         if (newFilters.lokaliti && newFilters.lokaliti.length > 0) {
-          newFilters.lokaliti = newFilters.lokaliti.filter((l) =>
+          newFilters.lokaliti = newFilters.lokaliti.filter(l => 
             lokalitiForDaerah.includes(l)
-          );
+          )
           if (newFilters.lokaliti.length === 0) {
-            newFilters.lokaliti = undefined;
+            newFilters.lokaliti = undefined
           }
         }
       } else {
         // Reset to all lokaliti if no daerah selected
-        const allLokaliti = await getUniqueValues("lokaliti");
-        setLokalitiOptions(allLokaliti);
+        const allLokaliti = await getUniqueValues('lokaliti')
+        setLokalitiOptions(allLokaliti)
       }
     }
-
-    setFilters(newFilters);
-  };
+    
+    setFilters(newFilters)
+  }
 
   const resetFilters = async () => {
-    setFilters({});
-    setFilteredVoters(voters);
-    setCurrentPage(1);
+    setFilters({})
+    setFilteredVoters(voters)
+    setCurrentPage(1)
     // Reset lokaliti to show all
-    const allLokaliti = await getUniqueValues("lokaliti");
-    setLokalitiOptions(allLokaliti);
-  };
+    const allLokaliti = await getUniqueValues('lokaliti')
+    setLokalitiOptions(allLokaliti)
+  }
 
   const exportToCSV = () => {
     if (filteredVoters.length === 0) {
-      alert("No data to export");
-      return;
+      alert('No data to export')
+      return
     }
 
     const headers = [
-      "BIL",
-      "NO K/P",
-      "NO K/P ID LAIN",
-      "JANTINA",
-      "TAHUN LAHIR",
-      "AGE",
-      "NAMA PEMILIH",
-      "KOD DAERAH MENGUNDI",
-      "DAERAH MENGUNDI",
-      "KOD LOKALITI",
-      "LOKALITI",
-      "TAG",
-    ];
+      'BIL',
+      'NO K/P',
+      'NO K/P ID LAIN',
+      'JANTINA',
+      'TAHUN LAHIR',
+      'AGE',
+      'NAMA PEMILIH',
+      'KOD DAERAH MENGUNDI',
+      'DAERAH MENGUNDI',
+      'KOD LOKALITI',
+      'LOKALITI',
+      'DUN',
+      'TAG',
+    ]
 
     const csvContent = [
-      headers.join(","),
+      headers.join(','),
       ...filteredVoters.map((voter) => {
-        const age = calculateAge(voter.tahun_lahir);
+        const age = calculateAge(voter.tahun_lahir)
         return [
           voter.bil,
           voter.no_kp,
-          voter.no_kp_id_lain || "",
+          voter.no_kp_id_lain || '',
           voter.jantina,
           voter.tahun_lahir,
           age,
@@ -215,32 +220,33 @@ export default function Home() {
           `"${voter.daerah_mengundi}"`,
           voter.kod_lokaliti,
           `"${voter.lokaliti}"`,
-          voter.tag || "",
-        ].join(",");
+          voter.dun || '',
+          voter.tag || '',
+        ].join(',')
       }),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
 
-    link.setAttribute("href", url);
+    link.setAttribute('href', url)
     link.setAttribute(
-      "download",
+      'download',
       `voters_export_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    link.style.visibility = "hidden";
+    )
+    link.style.visibility = 'hidden'
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   // Pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentVoters = filteredVoters.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredVoters.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentVoters = filteredVoters.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(filteredVoters.length / itemsPerPage)
 
   if (loading) {
     return (
@@ -250,7 +256,7 @@ export default function Home() {
           <p className="text-gray-600">Loading voter data...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -263,17 +269,15 @@ export default function Home() {
         </div>
 
         {/* Debug Info - Remove after testing */}
-        {process.env.NODE_ENV === "development" && (
+        {process.env.NODE_ENV === 'development' && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
             <h3 className="font-bold text-yellow-800 mb-2">🔍 Debug Info:</h3>
             <div className="text-sm text-yellow-700 space-y-1">
               <div>Total Voters: {voters.length}</div>
-              <div>
-                Daerah Options: {daerahOptions.length} (
-                {daerahOptions.slice(0, 3).join(", ")}
-                {daerahOptions.length > 3 ? "..." : ""})
-              </div>
+              <div>DUN Options: {dunOptions.length} ({dunOptions.join(', ')})</div>
+              <div>Daerah Options: {daerahOptions.length}</div>
               <div>Lokaliti Options: {lokalitiOptions.length}</div>
+              <div>Selected DUN: {filters.dun?.length || 0}</div>
               <div>Selected Daerah: {filters.daerah?.length || 0}</div>
               <div>Selected Lokaliti: {filters.lokaliti?.length || 0}</div>
             </div>
@@ -288,30 +292,11 @@ export default function Home() {
           onReset={resetFilters}
           daerahOptions={daerahOptions}
           lokalitiOptions={lokalitiOptions}
+          dunOptions={dunOptions}
         />
 
         {/* Statistics */}
         <Statistics voters={filteredVoters} />
-
-        {/* Analytics Toggle Button */}
-        <div className="mb-4">
-          <button
-            onClick={() => setShowAnalytics(!showAnalytics)}
-            className={`${
-              showAnalytics ? "btn-primary" : "btn-secondary"
-            } transition-all`}
-          >
-            <span className="mr-2">📈</span>
-            {showAnalytics ? "Hide" : "Show"} Predictive Analytics
-          </button>
-        </div>
-
-        {/* Predictive Analytics Section */}
-        {showAnalytics && (
-          <div className="mb-6">
-            <PredictiveAnalytics voters={voters} totalVoters={voters.length} />
-          </div>
-        )}
 
         {/* Export Button */}
         <div className="mb-4 flex justify-end">
@@ -337,9 +322,7 @@ export default function Home() {
                   Previous
                 </button>
                 <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                   className="btn-secondary disabled:opacity-50"
                 >
@@ -349,14 +332,12 @@ export default function Home() {
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Showing{" "}
-                    <span className="font-medium">{indexOfFirstItem + 1}</span>{" "}
-                    to{" "}
+                    Showing{' '}
+                    <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
                     <span className="font-medium">
                       {Math.min(indexOfLastItem, filteredVoters.length)}
-                    </span>{" "}
-                    of{" "}
-                    <span className="font-medium">{filteredVoters.length}</span>{" "}
+                    </span>{' '}
+                    of <span className="font-medium">{filteredVoters.length}</span>{' '}
                     results
                   </p>
                 </div>
@@ -389,5 +370,5 @@ export default function Home() {
         </div>
       </div>
     </div>
-  );
+  )
 }

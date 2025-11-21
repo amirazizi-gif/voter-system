@@ -1,15 +1,16 @@
-'use client'
+"use client";
 
-import { VoterFilters } from '@/lib/supabase'
-import { ChangeEvent, FormEvent, useState } from 'react'
+import { VoterFilters } from "@/lib/supabase";
+import { ChangeEvent, FormEvent, useState } from "react";
 
 interface FilterPanelProps {
-  filters: VoterFilters
-  onFilterChange: (filters: VoterFilters) => void
-  onSearch: () => void
-  onReset: () => void
-  daerahOptions: string[]
-  lokalitiOptions: string[]
+  filters: VoterFilters;
+  onFilterChange: (filters: VoterFilters) => void;
+  onSearch: () => void;
+  onReset: () => void;
+  daerahOptions: string[];
+  lokalitiOptions: string[];
+  dunOptions: string[];
 }
 
 export default function FilterPanel({
@@ -19,51 +20,66 @@ export default function FilterPanel({
   onReset,
   daerahOptions,
   lokalitiOptions,
+  dunOptions,
 }: FilterPanelProps) {
-  const [showDaerahDropdown, setShowDaerahDropdown] = useState(false)
-  const [showLokalitiDropdown, setShowLokalitiDropdown] = useState(false)
+  const [showDaerahDropdown, setShowDaerahDropdown] = useState(false);
+  const [showLokalitiDropdown, setShowLokalitiDropdown] = useState(false);
+  const [showDunDropdown, setShowDunDropdown] = useState(false);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     onFilterChange({
       ...filters,
-      [name]: value === '' ? undefined : value,
-    })
-  }
+      [name]: value === "" ? undefined : value,
+    });
+  };
 
   const handleDaerahToggle = (daerah: string) => {
-    const currentDaerahs = filters.daerah || []
+    const currentDaerahs = filters.daerah || [];
     const newDaerahs = currentDaerahs.includes(daerah)
-      ? currentDaerahs.filter(d => d !== daerah)
-      : [...currentDaerahs, daerah]
-    
+      ? currentDaerahs.filter((d) => d !== daerah)
+      : [...currentDaerahs, daerah];
+
     onFilterChange({
       ...filters,
       daerah: newDaerahs.length > 0 ? newDaerahs : undefined,
-    })
-  }
+    });
+  };
 
   const handleLokalitiToggle = (lokaliti: string) => {
-    const currentLokalitis = filters.lokaliti || []
+    const currentLokalitis = filters.lokaliti || [];
     const newLokalitis = currentLokalitis.includes(lokaliti)
-      ? currentLokalitis.filter(l => l !== lokaliti)
-      : [...currentLokalitis, lokaliti]
-    
+      ? currentLokalitis.filter((l) => l !== lokaliti)
+      : [...currentLokalitis, lokaliti];
+
     onFilterChange({
       ...filters,
       lokaliti: newLokalitis.length > 0 ? newLokalitis : undefined,
-    })
-  }
+    });
+  };
+
+  const handleDunToggle = (dun: string) => {
+    const currentDuns = filters.dun || [];
+    const newDuns = currentDuns.includes(dun)
+      ? currentDuns.filter((d) => d !== dun)
+      : [...currentDuns, dun];
+
+    onFilterChange({
+      ...filters,
+      dun: newDuns.length > 0 ? newDuns : undefined,
+    });
+  };
 
   const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    onSearch()
-  }
+    e.preventDefault();
+    onSearch();
+  };
 
-  const selectedDaerahCount = filters.daerah?.length || 0
-  const selectedLokalitiCount = filters.lokaliti?.length || 0
+  const selectedDaerahCount = filters.daerah?.length || 0;
+  const selectedLokalitiCount = filters.lokaliti?.length || 0;
+  const selectedDunCount = filters.dun?.length || 0;
 
   return (
     <div className="card mb-6">
@@ -82,7 +98,7 @@ export default function FilterPanel({
             <input
               type="text"
               name="nameSearch"
-              value={filters.nameSearch || ''}
+              value={filters.nameSearch || ""}
               onChange={handleInputChange}
               placeholder="Enter name..."
               className="input-field"
@@ -96,7 +112,7 @@ export default function FilterPanel({
             </label>
             <select
               name="gender"
-              value={filters.gender || ''}
+              value={filters.gender || ""}
               onChange={handleInputChange}
               className="input-field"
             >
@@ -113,7 +129,7 @@ export default function FilterPanel({
             </label>
             <select
               name="ageGroup"
-              value={filters.ageGroup || ''}
+              value={filters.ageGroup || ""}
               onChange={handleInputChange}
               className="input-field"
             >
@@ -133,7 +149,7 @@ export default function FilterPanel({
             <input
               type="number"
               name="specificAge"
-              value={filters.specificAge || ''}
+              value={filters.specificAge || ""}
               onChange={handleInputChange}
               placeholder="Enter age..."
               min="18"
@@ -142,10 +158,64 @@ export default function FilterPanel({
             />
           </div>
 
+          {/* DUN Filter - Multi-select (NEW - HIGHLIGHTED) */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <span className="bg-yellow-200 px-2 py-1 rounded">
+                🏛️ DUN Area
+              </span>{" "}
+              {selectedDunCount > 0 && `(${selectedDunCount})`}
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowDunDropdown(!showDunDropdown)}
+              className="input-field text-left flex justify-between items-center border-2 border-yellow-400"
+            >
+              <span className="truncate font-medium">
+                {selectedDunCount === 0
+                  ? "Select DUN area..."
+                  : selectedDunCount === 1
+                  ? filters.dun![0]
+                  : `${selectedDunCount} areas selected`}
+              </span>
+              <span>▼</span>
+            </button>
+            {showDunDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white border-2 border-yellow-400 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="p-2 bg-yellow-50">
+                  <div className="text-xs text-yellow-800 font-medium mb-2 px-2">
+                    📍 DUN (Dewan Undangan Negeri)
+                  </div>
+                  {dunOptions.length === 0 ? (
+                    <div className="text-sm text-gray-500 p-2">
+                      No DUN data available. Please add DUN column to database.
+                    </div>
+                  ) : (
+                    dunOptions.map((dun) => (
+                      <label
+                        key={dun}
+                        className="flex items-center p-2 hover:bg-yellow-100 cursor-pointer rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filters.dun?.includes(dun) || false}
+                          onChange={() => handleDunToggle(dun)}
+                          className="mr-2 h-4 w-4 text-yellow-600 rounded"
+                        />
+                        <span className="text-sm font-medium">{dun}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Daerah Filter - Multi-select */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Daerah Mengundi {selectedDaerahCount > 0 && `(${selectedDaerahCount})`}
+              Daerah Mengundi{" "}
+              {selectedDaerahCount > 0 && `(${selectedDaerahCount})`}
             </label>
             <button
               type="button"
@@ -154,7 +224,7 @@ export default function FilterPanel({
             >
               <span className="truncate">
                 {selectedDaerahCount === 0
-                  ? 'Select daerah...'
+                  ? "Select daerah..."
                   : `${selectedDaerahCount} selected`}
               </span>
               <span>▼</span>
@@ -184,7 +254,8 @@ export default function FilterPanel({
           {/* Lokaliti Filter - Multi-select */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Lokaliti {selectedLokalitiCount > 0 && `(${selectedLokalitiCount})`}
+              Lokaliti{" "}
+              {selectedLokalitiCount > 0 && `(${selectedLokalitiCount})`}
             </label>
             <button
               type="button"
@@ -193,7 +264,7 @@ export default function FilterPanel({
             >
               <span className="truncate">
                 {selectedLokalitiCount === 0
-                  ? 'Select lokaliti...'
+                  ? "Select lokaliti..."
                   : `${selectedLokalitiCount} selected`}
               </span>
               <span>▼</span>
@@ -227,7 +298,7 @@ export default function FilterPanel({
             </label>
             <select
               name="tag"
-              value={filters.tag || ''}
+              value={filters.tag || ""}
               onChange={handleInputChange}
               className="input-field"
             >
@@ -252,5 +323,5 @@ export default function FilterPanel({
         </div>
       </form>
     </div>
-  )
+  );
 }
