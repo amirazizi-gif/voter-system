@@ -106,14 +106,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          {/* <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <p className="text-xs text-gray-600 font-medium mb-2">Test Credentials:</p>
             <div className="text-xs text-gray-500 space-y-1">
               <div><span className="font-medium">Super Admin:</span> superadmin / Admin123!</div>
               <div><span className="font-medium">Candidate:</span> candidate1_pm / Test123!</div>
               <div><span className="font-medium">Assistant:</span> assistant1_pm / Test123!</div>
             </div>
-          </div>
+          </div> */}
         </div>
 
         <p className="text-center text-sm text-gray-600 mt-6">
