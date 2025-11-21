@@ -2,36 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 249, 250, 251;
-  --background-end-rgb: 255, 255, 255;
+/* Base styles - keep existing Tailwind */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+/* Mobile responsive utilities */
+@layer utilities {
+  /* Prevent horizontal overflow on mobile */
+  .mobile-safe {
+    @apply max-w-full overflow-x-hidden;
+  }
+
+  /* Mobile-friendly containers */
+  .container-mobile {
+    @apply w-full px-4 sm:px-6 lg:px-8 mx-auto;
+  }
+
+  /* Responsive grid */
+  .grid-mobile {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
+  }
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200;
+/* Mobile-specific fixes without breaking existing styles */
+@media (max-width: 640px) {
+  /* Ensure inputs and selects fit on mobile */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    max-width: 100% !important;
   }
 
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors duration-200;
+  /* Prevent body horizontal scroll */
+  body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
   }
 
-  .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none;
-  }
-
-  .card {
-    @apply bg-white rounded-lg shadow-md p-6;
+  /* Ensure all containers fit */
+  .container,
+  main,
+  section {
+    max-width: 100vw !important;
   }
 }
