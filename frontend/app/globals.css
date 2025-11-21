@@ -2,36 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 249, 250, 251;
-  --background-end-rgb: 255, 255, 255;
+/* Ensure proper mobile viewport handling */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply overflow-x-hidden;
+  }
+
+  /* Prevent horizontal scroll */
+  * {
+    @apply box-border;
+  }
+
+  /* Make inputs and selects responsive */
+  input,
+  select,
+  textarea {
+    @apply w-full max-w-full;
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-}
+/* Custom scrollbar for better mobile experience */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
 
-@layer components {
-  .btn-primary {
-    @apply bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200;
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
-  
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors duration-200;
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
-  
-  .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none;
+
+  /* Mobile-friendly tap targets */
+  .tap-target {
+    @apply min-h-[44px] min-w-[44px];
   }
-  
-  .card {
-    @apply bg-white rounded-lg shadow-md p-6;
+
+  /* Prevent text from being too small on mobile */
+  .text-mobile-safe {
+    @apply text-base sm:text-sm;
+  }
+
+  /* Container for forms on mobile */
+  .form-container-mobile {
+    @apply w-full max-w-full px-2 sm:px-4;
+  }
+
+  /* Responsive grid */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
+  }
+
+  /* Full-width on mobile, auto on desktop */
+  .width-mobile-full {
+    @apply w-full lg:w-auto;
   }
 }
