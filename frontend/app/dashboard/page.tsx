@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { getStatistics, fetchVoters } from '@/lib/api'
+import ChangePasswordModal from '@/components/ChangePasswordModal'
+import { getStatistics } from '@/lib/api'
 import Link from 'next/link'
 
 interface Statistics {
@@ -24,10 +25,34 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const [stats, setStats] = useState<Statistics | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [mustChangePassword, setMustChangePassword] = useState(false)
 
   useEffect(() => {
     loadStatistics()
+    checkPasswordChange()
   }, [])
+
+  const checkPasswordChange = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const userData = await response.json()
+        if (userData.must_change_password) {
+          setMustChangePassword(true)
+          setShowPasswordModal(true)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking password status:', error)
+    }
+  }
 
   const loadStatistics = async () => {
     try {
@@ -38,6 +63,11 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePasswordChanged = () => {
+    setShowPasswordModal(false)
+    setMustChangePassword(false)
   }
 
   if (loading) {
@@ -55,6 +85,14 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
+        {/* Change Password Modal */}
+        <ChangePasswordModal
+          isOpen={showPasswordModal}
+          onClose={() => setShowPasswordModal(false)}
+          onSuccess={handlePasswordChanged}
+          isFirstLogin={mustChangePassword}
+        />
+
         <div className="space-y-6">
           {/* Welcome Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 rounded-lg shadow-lg">

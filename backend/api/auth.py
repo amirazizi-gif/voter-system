@@ -1,6 +1,6 @@
 """
 FastAPI Authentication Router and Dependencies
-Handles login, logout, and user authentication
+Handles login, logout, password change, and user authentication
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status
@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from config.database import supabase
-from utils.auth import verify_token, verify_password, create_access_token, check_permission
+from utils.auth import verify_token, verify_password, create_access_token, check_permission, hash_password
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -25,6 +25,12 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: dict
+    must_change_password: bool = False
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -91,10 +97,14 @@ async def login(credentials: LoginRequest):
             "email": user.get("email")
         }
         
+        # Check if user must change password (default users)
+        must_change = user.get("must_change_password", False)
+        
         return LoginResponse(
             access_token=access_token,
             token_type="bearer",
-            user=user_info
+            user=user_info,
+            must_change_password=must_change
         )
     
     except HTTPException:
@@ -164,7 +174,83 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     """
     Get current authenticated user information
     """
+    # Get full user data including must_change_password flag
+    response = supabase.table("users").select("id, username, full_name, role, dun, email, must_change_password").eq("id", current_user["id"]).execute()
+    
+    if response.data and len(response.data) > 0:
+        return response.data[0]
+    
     return current_user
+
+
+@router.post("/change-password")
+async def change_password(
+    password_data: ChangePasswordRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Change user password
+    Requires current password for verification
+    """
+    try:
+        # Get user from database
+        user_id = current_user.get("user_id") or current_user.get("id")
+        response = supabase.table("users").select("*").eq("id", user_id).execute()
+        
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        user = response.data[0]
+        
+        # Verify current password
+        if not verify_password(password_data.current_password, user["password_hash"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect"
+            )
+        
+        # Validate new password strength
+        if len(password_data.new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be at least 8 characters long"
+            )
+        
+        # Check if new password is same as current
+        if password_data.current_password == password_data.new_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be different from current password"
+            )
+        
+        # Hash new password
+        new_hash = hash_password(password_data.new_password)
+        
+        # Update password and set must_change_password to False
+        supabase.table("users").update({
+            "password_hash": new_hash,
+            "must_change_password": False
+        }).eq("id", user_id).execute()
+        
+        # Log the password change
+        supabase.table("audit_log").insert({
+            "user_id": user_id,
+            "action": "password_changed",
+            "table_name": "users"
+        }).execute()
+        
+        return {"message": "Password changed successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to change password: {str(e)}"
+        )
 
 
 @router.post("/logout")
