@@ -18,8 +18,14 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await login(username, password)
+      // Login returns true if user must change password
+      const mustChange = await login(username, password)
+      
+      console.log('📍 Login page - must change password:', mustChange)
+      
+      // Always redirect to dashboard - the dashboard will show the modal if needed
       router.push('/dashboard')
+      
     } catch (err: any) {
       setError(err.message || 'Invalid username or password')
     } finally {
@@ -105,15 +111,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600 font-medium mb-2">Test Credentials:</p>
-            <div className="text-xs text-gray-500 space-y-1">
-              <div><span className="font-medium">Super Admin:</span> superadmin / Admin123!</div>
-              <div><span className="font-medium">Candidate:</span> candidate1_pm / Test123!</div>
-              <div><span className="font-medium">Assistant:</span> assistant1_pm / Test123!</div>
-            </div>
-          </div> */}
         </div>
 
         <p className="text-center text-sm text-gray-600 mt-6">
