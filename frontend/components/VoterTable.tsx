@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 interface VoterTableProps {
   voters: Voter[]
-  onTagUpdate: () => void
+  onTagUpdate: (voterId: number, newTag: 'Yes' | 'Unsure' | 'No' | null) => void  // Changed signature
   canUpdate?: boolean
 }
 
@@ -18,14 +18,19 @@ export default function VoterTable({ voters, onTagUpdate, canUpdate = true }: Vo
       return
     }
 
+    const tagValue = newTag === '' ? null : (newTag as 'Yes' | 'Unsure' | 'No')
+    
+    // Update UI immediately (optimistic update)
+    onTagUpdate(voterId, tagValue)
+    
     setUpdatingId(voterId)
     try {
-      const tagValue = newTag === '' ? null : (newTag as 'Yes' | 'Unsure' | 'No')
+      // Sync to backend in background (user doesn't wait!)
       await updateVoterTag(voterId, tagValue)
-      onTagUpdate()
     } catch (error) {
       console.error('Error updating tag:', error)
       alert('Failed to update tag. Please try again.')
+      // TODO: Rollback the optimistic update here if needed
     } finally {
       setUpdatingId(null)
     }

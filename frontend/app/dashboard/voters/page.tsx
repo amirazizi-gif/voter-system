@@ -54,6 +54,25 @@ export default function VotersPage() {
     }
   }
 
+  // ⚡ NEW: Handle tag updates locally (NO re-fetch!)
+  const handleTagUpdate = (voterId: number, newTag: 'Yes' | 'Unsure' | 'No' | null) => {
+    // Update the main voters array
+    setVoters(prevVoters =>
+      prevVoters.map(v =>
+        v.id === voterId ? { ...v, tag: newTag } : v
+      )
+    )
+
+    // Update the filtered voters array
+    setFilteredVoters(prevFiltered =>
+      prevFiltered.map(v =>
+        v.id === voterId ? { ...v, tag: newTag } : v
+      )
+    )
+
+    console.log(`✅ Updated voter ${voterId} to ${newTag} (instant!)`)
+  }
+
   const applyFilters = () => {
     let filtered = [...voters]
 
@@ -253,7 +272,11 @@ export default function VotersPage() {
 
           {/* Results Table */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <VoterTable voters={currentVoters} onTagUpdate={loadData} canUpdate={canUpdateVoters} />
+            <VoterTable 
+              voters={currentVoters} 
+              onTagUpdate={handleTagUpdate}  
+              canUpdate={canUpdateVoters} 
+            />
 
             {/* Pagination */}
             {filteredVoters.length > 0 && (
