@@ -72,6 +72,7 @@ export const fetchVoters = async (filters: VoterFilters = {}) => {
   return data.data as Voter[]
 }
 
+// OPTIMIZED: Single voter update with optimistic UI support
 export const updateVoterTag = async (voterId: number, tag: 'Yes' | 'Unsure' | 'No' | null) => {
   const response = await fetch(`${API_BASE_URL}/api/voters/${voterId}`, {
     method: 'PATCH',
@@ -89,6 +90,87 @@ export const updateVoterTag = async (voterId: number, tag: 'Yes' | 'Unsure' | 'N
   const data = await response.json()
   return data
 }
+
+// NEW: Batch update multiple voters at once
+export interface BatchUpdate {
+  voter_id: number
+  tag: 'Yes' | 'Unsure' | 'No' | null
+}
+
+export const batchUpdateVoterTags = async (updates: BatchUpdate[]) => {
+  const response = await fetch(`${API_BASE_URL}/api/voters/batch-update`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify({ updates }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to batch update voters')
+  }
+
+  const data = await response.json()
+  return data
+}
+
+// NEW: Queue for pending updates (client-side only)
+class UpdateQueue {
+  private queue: Map<number, 'Yes' | 'Unsure' | 'No' | null> = new Map()
+  private timer: NodeJS.Timeout | null = null
+  private readonly BATCH_DELAY = 2000 // 2 seconds
+
+  add(voterId: number, tag: 'Yes' | 'Unsure' | 'No' | null) {
+    this.queue.set(voterId, tag)
+    
+    // Clear existing timer
+    if (this.timer) {
+      clearTimeout(this.timer)
+    }
+
+    // Set new timer to flush after delay
+    this.timer = setTimeout(() => {
+      this.flush()
+    }, this.BATCH_DELAY)
+  }
+
+  async flush() {
+    if (this.queue.size === 0) return
+
+    const updates: BatchUpdate[] = Array.from(this.queue.entries()).map(
+      ([voter_id, tag]) => ({ voter_id, tag })
+    )
+
+    this.queue.clear()
+
+    try {
+      await batchUpdateVoterTags(updates)
+      console.log(`✅ Synced ${updates.length} updates to server`)
+    } catch (error) {
+      console.error('❌ Failed to sync updates:', error)
+      // Re-queue failed updates
+      updates.forEach((update) => {
+        this.queue.set(update.voter_id, update.tag)
+      })
+    }
+  }
+
+  getPendingCount() {
+    return this.queue.size
+  }
+
+  hasPending(voterId: number) {
+    return this.queue.has(voterId)
+  }
+
+  getPendingTag(voterId: number) {
+    return this.queue.get(voterId)
+  }
+}
+
+// Export singleton instance
+export const updateQueue = new UpdateQueue()
 
 export const getUniqueValues = async (column: 'daerah_mengundi' | 'lokaliti' | 'dun'): Promise<string[]> => {
   let endpoint = ''

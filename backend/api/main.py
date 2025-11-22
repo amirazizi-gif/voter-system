@@ -55,6 +55,13 @@ class VoterFilters(BaseModel):
     dun: Optional[str] = None
     tag: Optional[str] = None
 
+class BatchTagUpdate(BaseModel):
+    voter_id: int
+    tag: Optional[str] = None
+
+class BatchUpdateRequest(BaseModel):
+    updates: List[BatchTagUpdate]
+
 
 @app.get("/")
 def root():
@@ -381,6 +388,91 @@ async def get_user_activity(
         
         return {"data": response.data}
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/api/voters/batch-update")
+async def batch_update_voters(
+    batch_request: BatchUpdateRequest,
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Batch update multiple voter tags at once
+    Much faster than individual updates!
+    """
+    try:
+        # Check permission
+        if not check_permission(current_user['role'], 'update_voters'):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to update voters"
+            )
+        
+        updated_count = 0
+        failed_updates = []
+        
+        for update in batch_request.updates:
+            try:
+                # Get voter to check DUN access
+                voter_response = supabase.table('voters').select('*').eq('id', update.voter_id).execute()
+                
+                if not voter_response.data:
+                    failed_updates.append({
+                        'voter_id': update.voter_id,
+                        'error': 'Voter not found'
+                    })
+                    continue
+                
+                voter = voter_response.data[0]
+                
+                # Check DUN access
+                if current_user['role'] != 'super_admin':
+                    if voter.get('dun') != current_user.get('dun'):
+                        failed_updates.append({
+                            'voter_id': update.voter_id,
+                            'error': 'Access denied to this DUN'
+                        })
+                        continue
+                
+                # Update voter
+                response = supabase.table('voters').update({
+                    'tag': update.tag,
+                    'updated_at': datetime.utcnow().isoformat()
+                }).eq('id', update.voter_id).execute()
+                
+                if response.data:
+                    updated_count += 1
+                else:
+                    failed_updates.append({
+                        'voter_id': update.voter_id,
+                        'error': 'Update failed'
+                    })
+                    
+            except Exception as e:
+                failed_updates.append({
+                    'voter_id': update.voter_id,
+                    'error': str(e)
+                })
+        
+        # Log batch update
+        supabase.table('audit_log').insert({
+            'user_id': current_user['id'],
+            'action': 'batch_update',
+            'table_name': 'voters',
+            'details': f'Updated {updated_count} voters',
+            'ip_address': request.client.host
+        }).execute()
+        
+        return {
+            'success': True,
+            'updated_count': updated_count,
+            'total_requested': len(batch_request.updates),
+            'failed_updates': failed_updates
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
