@@ -175,7 +175,9 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     Get current authenticated user information
     """
     # Get full user data including must_change_password flag
-    response = supabase.table("users").select("id, username, full_name, role, dun, email, must_change_password").eq("id", current_user["id"]).execute()
+    response = supabase.table("users").select(
+        "id, username, full_name, role, dun, must_change_password"
+    ).eq("id", current_user["id"]).execute()
     
     if response.data and len(response.data) > 0:
         return response.data[0]
