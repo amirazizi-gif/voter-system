@@ -35,7 +35,24 @@ export default function DashboardPage() {
 
   const checkPasswordChange = async () => {
     try {
+      // IMPORTANT: Check localStorage FIRST for immediate feedback
+      const storedMustChange = localStorage.getItem('must_change_password')
+      console.log('🔍 Dashboard - Checking password requirement:', storedMustChange)
+      
+      if (storedMustChange === 'true') {
+        console.log('⚠️ localStorage says must change password - showing modal immediately')
+        setMustChangePassword(true)
+        setShowPasswordModal(true)
+      }
+
+      // Then verify with backend
       const token = localStorage.getItem('token')
+      if (!token) {
+        console.log('❌ No token found')
+        return
+      }
+
+      console.log('📡 Fetching user data from backend...')
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -44,13 +61,25 @@ export default function DashboardPage() {
 
       if (response.ok) {
         const userData = await response.json()
+        console.log('👤 User data from backend:', userData)
+        console.log('🔒 must_change_password from backend:', userData.must_change_password)
+        
         if (userData.must_change_password) {
+          console.log('✅ Backend confirms: must change password - FORCING MODAL OPEN')
           setMustChangePassword(true)
           setShowPasswordModal(true)
+          localStorage.setItem('must_change_password', 'true')
+        } else {
+          console.log('✅ Backend says no password change needed')
+          // Backend says no need to change, clear localStorage
+          localStorage.removeItem('must_change_password')
+          setMustChangePassword(false)
         }
+      } else {
+        console.error('❌ Failed to fetch user data:', response.status)
       }
     } catch (error) {
-      console.error('Error checking password status:', error)
+      console.error('❌ Error checking password status:', error)
     }
   }
 
@@ -66,8 +95,20 @@ export default function DashboardPage() {
   }
 
   const handlePasswordChanged = () => {
+    console.log('✅ Password changed successfully - closing modal')
     setShowPasswordModal(false)
     setMustChangePassword(false)
+    localStorage.removeItem('must_change_password')
+  }
+
+  const handleModalClose = () => {
+    // Don't allow closing if first login
+    if (mustChangePassword) {
+      console.log('⛔ Cannot close modal - password change required')
+      return
+    }
+    console.log('👋 Closing modal (not first login)')
+    setShowPasswordModal(false)
   }
 
   if (loading) {
@@ -85,13 +126,15 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        {/* Change Password Modal */}
-        <ChangePasswordModal
-          isOpen={showPasswordModal}
-          onClose={() => setShowPasswordModal(false)}
-          onSuccess={handlePasswordChanged}
-          isFirstLogin={mustChangePassword}
-        />
+        {/* Change Password Modal - ALWAYS RENDER if mustChangePassword is true */}
+        {(showPasswordModal || mustChangePassword) && (
+          <ChangePasswordModal
+            isOpen={true}
+            onClose={handleModalClose}
+            onSuccess={handlePasswordChanged}
+            isFirstLogin={mustChangePassword}
+          />
+        )}
 
         <div className="space-y-6">
           {/* Welcome Header */}
