@@ -24,7 +24,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: '📈',
       roles: ['candidate', 'super_admin', 'pdm', 'candidate_assistant', 'super_user'],
     },
-    { name: 'Audit Logs', href: '/dashboard/audit', icon: '📋', roles: ['super_admin'] },
+    // { name: 'Audit Logs', href: '/dashboard/audit', icon: '📋', roles: ['super_admin'] },
   ]
 
   const filteredNav = navigation.filter(
