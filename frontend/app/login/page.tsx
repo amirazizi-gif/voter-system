@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
@@ -9,8 +9,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
+  const { login, user, isLoading: authLoading } = useAuth()
   const router = useRouter()
+
+  // ✅ AUTO-REDIRECT: If user is already logged in, redirect to dashboard
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log('👤 User already logged in, redirecting to dashboard...')
+      router.push('/dashboard')
+    }
+  }, [user, authLoading, router])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -18,19 +26,34 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // Login returns true if user must change password
-      const mustChange = await login(username, password)
-      
-      console.log('📍 Login page - must change password:', mustChange)
-      
-      // Always redirect to dashboard - the dashboard will show the modal if needed
-      router.push('/dashboard')
-      
+      await login(username, password)
+      // Login function will redirect to dashboard
     } catch (err: any) {
       setError(err.message || 'Invalid username or password')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading while checking auth status
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // Don't show login form if already logged in (while redirecting)
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

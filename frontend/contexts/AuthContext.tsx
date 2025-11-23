@@ -9,12 +9,10 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
-// Use environment variable for API URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// Debug logging
-console.log("🔍 AuthContext API_BASE_URL:", API_BASE_URL);
-console.log("🔍 Environment variable:", process.env.NEXT_PUBLIC_API_URL);
+// ⏰ SESSION CONFIGURATION
+const SESSION_DURATION = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
 
 interface User {
   id: string;
@@ -44,23 +42,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const router = useRouter();
 
+  // ✅ CHECK SESSION ON MOUNT
   useEffect(() => {
+    checkSession();
+  }, []);
+
+  // ⏰ CHECK SESSION EXPIRATION EVERY MINUTE
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkSessionExpiration();
+    }, 60000); // Check every 1 minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const checkSession = () => {
     const storedToken = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
     const storedMustChange = localStorage.getItem("must_change_password");
+    const loginTime = localStorage.getItem("login_time");
 
-    if (storedToken && storedUser) {
+    if (storedToken && storedUser && loginTime) {
+      const now = new Date().getTime();
+      const sessionAge = now - parseInt(loginTime);
+
+      // Check if session has expired (3 days)
+      if (sessionAge > SESSION_DURATION) {
+        console.log("⏰ Session expired (3 days), logging out...");
+        handleSessionExpired();
+        return;
+      }
+
+      // Session is valid
       setToken(storedToken);
       try {
         setUser(JSON.parse(storedUser));
         setMustChangePassword(storedMustChange === "true");
+        console.log(`✅ Session valid, expires in ${Math.floor((SESSION_DURATION - sessionAge) / (1000 * 60 * 60))} hours`);
       } catch (e) {
         console.error("Failed to parse stored user:", e);
-        localStorage.removeItem("user");
+        handleSessionExpired();
       }
     }
     setIsLoading(false);
-  }, []);
+  };
+
+  const checkSessionExpiration = () => {
+    const loginTime = localStorage.getItem("login_time");
+    
+    if (loginTime) {
+      const now = new Date().getTime();
+      const sessionAge = now - parseInt(loginTime);
+
+      if (sessionAge > SESSION_DURATION) {
+        console.log("⏰ Session expired during check, logging out...");
+        handleSessionExpired();
+      }
+    }
+  };
+
+  const handleSessionExpired = () => {
+    // Clear all stored data
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("must_change_password");
+    localStorage.removeItem("login_time");
+    
+    setToken(null);
+    setUser(null);
+    setMustChangePassword(false);
+    
+    // Show alert
+    alert("⏰ Sesi anda telah tamat tempoh. Sila log masuk semula.\n\nYour session has expired. Please login again.");
+    
+    // Redirect to login
+    router.push("/login");
+  };
 
   const login = async (
     username: string,
@@ -69,12 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loginUrl = `${API_BASE_URL}/api/auth/login`;
 
     console.log("🔐 Attempting login...");
-    console.log("📍 API URL:", loginUrl);
-    console.log("👤 Username:", username);
 
     try {
-      console.log("📡 Sending fetch request...");
-
       const response = await fetch(loginUrl, {
         method: "POST",
         headers: {
@@ -83,19 +136,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ username, password }),
       });
 
-      console.log("📥 Response received");
-      console.log("📊 Status:", response.status);
-      console.log("📊 Status Text:", response.statusText);
-      console.log("📊 OK:", response.ok);
-
       if (!response.ok) {
         let errorMessage = "Login failed";
         try {
           const error = await response.json();
           errorMessage = error.detail || errorMessage;
-          console.error("❌ Error response:", error);
         } catch (e) {
-          console.error("❌ Failed to parse error response:", e);
           errorMessage = `Login failed: ${response.status} ${response.statusText}`;
         }
         throw new Error(errorMessage);
@@ -103,11 +149,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       console.log("✅ Login successful!");
-      console.log("👤 User:", data.user);
-      console.log("🔒 Must change password:", data.must_change_password);
 
+      // Store login time for session expiration
+      const loginTime = new Date().getTime().toString();
+      
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("login_time", loginTime);
 
       // Store password change flag
       const mustChange = data.must_change_password || false;
@@ -117,22 +165,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       setMustChangePassword(mustChange);
 
-      console.log("🎉 Login complete, must_change_password:", mustChange);
+      console.log(`🎉 Login complete, session expires in 3 days`);
 
-      // Return the must_change_password flag so caller knows
       return mustChange;
     } catch (error) {
       console.error("❌ Login error:", error);
-
-      // More detailed error logging
-      if (error instanceof TypeError) {
-        console.error("🔴 TypeError - This usually means:");
-        console.error("   1. Network request failed (CORS, network issue)");
-        console.error("   2. API URL is incorrect:", loginUrl);
-        console.error("   3. Backend is not accessible");
-        console.error("   4. Mixed content (HTTP vs HTTPS)");
-      }
-
       throw error;
     }
   };
@@ -142,10 +179,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("must_change_password");
+    localStorage.removeItem("login_time");
     setToken(null);
     setUser(null);
     setMustChangePassword(false);
     router.push("/login");
+  };
+
+  // ✅ GET SESSION INFO (for debugging or display)
+  const getSessionInfo = () => {
+    const loginTime = localStorage.getItem("login_time");
+    if (!loginTime) return null;
+
+    const now = new Date().getTime();
+    const sessionAge = now - parseInt(loginTime);
+    const remainingTime = SESSION_DURATION - sessionAge;
+    
+    return {
+      loginTime: new Date(parseInt(loginTime)),
+      sessionAge: sessionAge,
+      remainingTime: remainingTime,
+      expiresAt: new Date(parseInt(loginTime) + SESSION_DURATION),
+      isExpired: remainingTime <= 0
+    };
   };
 
   return (
