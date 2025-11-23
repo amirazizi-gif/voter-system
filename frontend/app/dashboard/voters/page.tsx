@@ -167,61 +167,268 @@ export default function VotersPage() {
     setLokalitiOptions(allLokaliti)
   }
 
-  const exportToCSV = () => {
+  // ===================================
+  // ENHANCED EXPORT WITH SUMMARY
+  // ===================================
+  const exportToCSVWithSummary = () => {
     if (filteredVoters.length === 0) {
       alert('No data to export')
       return
     }
 
+    // Calculate Statistics
+    const maleCount = filteredVoters.filter(v => v.jantina === 'L').length
+    const femaleCount = filteredVoters.filter(v => v.jantina === 'P').length
+
+    const ages = filteredVoters.map(v => calculateAge(v.tahun_lahir))
+    const minAge = Math.min(...ages)
+    const maxAge = Math.max(...ages)
+    const avgAge = (ages.reduce((sum, age) => sum + age, 0) / ages.length).toFixed(1)
+
+    const ageRanges = {
+      '18-30': filteredVoters.filter(v => {
+        const age = calculateAge(v.tahun_lahir)
+        return age >= 18 && age <= 30
+      }).length,
+      '31-40': filteredVoters.filter(v => {
+        const age = calculateAge(v.tahun_lahir)
+        return age >= 31 && age <= 40
+      }).length,
+      '41-55': filteredVoters.filter(v => {
+        const age = calculateAge(v.tahun_lahir)
+        return age >= 41 && age <= 55
+      }).length,
+      '56+': filteredVoters.filter(v => {
+        const age = calculateAge(v.tahun_lahir)
+        return age >= 56
+      }).length
+    }
+
+    const dunBreakdown = filteredVoters.reduce((acc, v) => {
+      const dun = v.dun || 'No DUN'
+      acc[dun] = (acc[dun] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    const daerahBreakdown = filteredVoters.reduce((acc, v) => {
+      acc[v.daerah_mengundi] = (acc[v.daerah_mengundi] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    const lokalitiBreakdown = filteredVoters.reduce((acc, v) => {
+      acc[v.lokaliti] = (acc[v.lokaliti] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    const tagStats = {
+      yes: filteredVoters.filter(v => v.tag === 'Yes').length,
+      unsure: filteredVoters.filter(v => v.tag === 'Unsure').length,
+      no: filteredVoters.filter(v => v.tag === 'No').length,
+      untagged: filteredVoters.filter(v => !v.tag).length
+    }
+
+    // Build CSV Content
+    const csvLines: string[] = []
+
+    csvLines.push('='.repeat(100))
+    csvLines.push('LAPORAN EKSPORT PANGKALAN DATA PENGUNDI / VOTER DATABASE EXPORT REPORT')
+    csvLines.push('='.repeat(100))
+    csvLines.push('')
+
+    // Export Details
+    csvLines.push('MAKLUMAT EKSPORT / EXPORT DETAILS')
+    csvLines.push('-'.repeat(100))
+    csvLines.push(`Tarikh Eksport / Export Date:,${new Date().toLocaleString('ms-MY', { dateStyle: 'full', timeStyle: 'short' })}`)
+    csvLines.push(`Jumlah Rekod / Total Records:,${filteredVoters.length.toLocaleString()}`)
+    csvLines.push(`Dieksport Oleh / Exported By:,${user?.full_name} (${user?.username})`)
+    csvLines.push(`Peranan / Role:,${user?.role.replace('_', ' ').toUpperCase()}`)
+    if (user?.dun) csvLines.push(`DUN:,${user.dun}`)
+    csvLines.push('')
+
+    // Active Filters
+    csvLines.push('PENAPIS AKTIF / ACTIVE FILTERS')
+    csvLines.push('-'.repeat(100))
+    if (filters.nameSearch) csvLines.push(`Carian Nama / Name Search:,${filters.nameSearch}`)
+    if (filters.gender) csvLines.push(`Jantina / Gender:,${filters.gender === 'L' ? 'Lelaki / Male' : 'Perempuan / Female'}`)
+    if (filters.ageGroup) csvLines.push(`Kumpulan Umur / Age Group:,${filters.ageGroup}`)
+    if (filters.specificAge) csvLines.push(`Umur Spesifik / Specific Age:,${filters.specificAge}`)
+    if (filters.dun && filters.dun.length > 0) csvLines.push(`Penapis DUN / DUN Filter:,"${filters.dun.join(', ')}"`)
+    if (filters.daerah && filters.daerah.length > 0) csvLines.push(`Penapis Daerah / Daerah Filter:,"${filters.daerah.join(', ')}"`)
+    if (filters.lokaliti && filters.lokaliti.length > 0) csvLines.push(`Penapis Lokaliti / Lokaliti Filter:,"${filters.lokaliti.join(', ')}"`)
+    if (filters.tag) csvLines.push(`Penapis Tag / Tag Filter:,${filters.tag}`)
+    if (!Object.values(filters).some(v => v)) csvLines.push('Tiada penapis / No filters applied,Semua pengundi disertakan / All voters included')
+    csvLines.push('')
+
+    // DUN Breakdown
+    csvLines.push('PECAHAN MENGIKUT DUN / DUN BREAKDOWN')
+    csvLines.push('-'.repeat(100))
+    csvLines.push('Kawasan DUN / DUN Area,Bilangan / Count,Peratusan / Percentage')
+    Object.entries(dunBreakdown)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([dun, count]) => {
+        const percentage = ((count / filteredVoters.length) * 100).toFixed(1)
+        csvLines.push(`"${dun}",${count.toLocaleString()},${percentage}%`)
+      })
+    csvLines.push(`JUMLAH / TOTAL,${filteredVoters.length.toLocaleString()},100.0%`)
+    csvLines.push('')
+
+    // Gender Breakdown
+    csvLines.push('PECAHAN JANTINA / GENDER BREAKDOWN')
+    csvLines.push('-'.repeat(100))
+    csvLines.push('Jantina / Gender,Bilangan / Count,Peratusan / Percentage')
+    csvLines.push(`Lelaki / Male,${maleCount.toLocaleString()},${((maleCount / filteredVoters.length) * 100).toFixed(1)}%`)
+    csvLines.push(`Perempuan / Female,${femaleCount.toLocaleString()},${((femaleCount / filteredVoters.length) * 100).toFixed(1)}%`)
+    csvLines.push(`JUMLAH / TOTAL,${filteredVoters.length.toLocaleString()},100.0%`)
+    csvLines.push(`Nisbah L:P / M:F Ratio,${(maleCount / femaleCount).toFixed(2)}:1,`)
+    csvLines.push('')
+
+    // Age Statistics
+    csvLines.push('STATISTIK UMUR / AGE STATISTICS')
+    csvLines.push('-'.repeat(100))
+    csvLines.push(`Umur Minimum / Minimum Age:,${minAge} tahun / years`)
+    csvLines.push(`Umur Maksimum / Maximum Age:,${maxAge} tahun / years`)
+    csvLines.push(`Umur Purata / Average Age:,${avgAge} tahun / years`)
+    csvLines.push(`Julat Umur / Age Range:,${minAge} - ${maxAge} tahun / years`)
+    csvLines.push('')
+
+    // Age Range Breakdown
+    csvLines.push('PECAHAN JULAT UMUR / AGE RANGE BREAKDOWN')
+    csvLines.push('-'.repeat(100))
+    csvLines.push('Julat Umur / Age Range,Bilangan / Count,Peratusan / Percentage')
+    Object.entries(ageRanges).forEach(([range, count]) => {
+      const percentage = ((count / filteredVoters.length) * 100).toFixed(1)
+      csvLines.push(`${range} tahun / years,${count.toLocaleString()},${percentage}%`)
+    })
+    csvLines.push(`JUMLAH / TOTAL,${filteredVoters.length.toLocaleString()},100.0%`)
+    csvLines.push('')
+
+    // Daerah Mengundi Breakdown
+    csvLines.push('PECAHAN DAERAH MENGUNDI / POLLING DISTRICT BREAKDOWN')
+    csvLines.push('-'.repeat(100))
+    csvLines.push('Daerah Mengundi / Polling District,Bilangan / Count,Peratusan / Percentage')
+    Object.entries(daerahBreakdown)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([daerah, count]) => {
+        const percentage = ((count / filteredVoters.length) * 100).toFixed(1)
+        csvLines.push(`"${daerah}",${count.toLocaleString()},${percentage}%`)
+      })
+    csvLines.push(`JUMLAH / TOTAL,${filteredVoters.length.toLocaleString()},100.0%`)
+    csvLines.push('')
+
+    // Lokaliti Breakdown (Top 20)
+    csvLines.push('PECAHAN LOKALITI (20 TERATAS) / LOCALITY BREAKDOWN (TOP 20)')
+    csvLines.push('-'.repeat(100))
+    csvLines.push('Lokaliti / Locality,Bilangan / Count,Peratusan / Percentage')
+    const lokalitiEntries = Object.entries(lokalitiBreakdown).sort((a, b) => b[1] - a[1])
+    lokalitiEntries.slice(0, 20).forEach(([lokaliti, count]) => {
+      const percentage = ((count / filteredVoters.length) * 100).toFixed(1)
+      csvLines.push(`"${lokaliti}",${count.toLocaleString()},${percentage}%`)
+    })
+    if (lokalitiEntries.length > 20) {
+      const remainingCount = lokalitiEntries.slice(20).reduce((sum, [_, count]) => sum + count, 0)
+      const remainingPercentage = ((remainingCount / filteredVoters.length) * 100).toFixed(1)
+      csvLines.push(`"Lain-lain / Others (${lokalitiEntries.length - 20} lokaliti)",${remainingCount.toLocaleString()},${remainingPercentage}%`)
+    }
+    csvLines.push(`JUMLAH / TOTAL,${filteredVoters.length.toLocaleString()},100.0%`)
+    csvLines.push('')
+
+    // Tag Statistics
+    csvLines.push('STATISTIK TAG / TAG STATISTICS')
+    csvLines.push('-'.repeat(100))
+    csvLines.push('Status Tag / Tag Status,Bilangan / Count,Peratusan / Percentage')
+    csvLines.push(`Ya / Yes,${tagStats.yes.toLocaleString()},${((tagStats.yes / filteredVoters.length) * 100).toFixed(1)}%`)
+    csvLines.push(`Tidak Pasti / Unsure,${tagStats.unsure.toLocaleString()},${((tagStats.unsure / filteredVoters.length) * 100).toFixed(1)}%`)
+    csvLines.push(`Tidak / No,${tagStats.no.toLocaleString()},${((tagStats.no / filteredVoters.length) * 100).toFixed(1)}%`)
+    csvLines.push(`Tidak Ditag / Untagged,${tagStats.untagged.toLocaleString()},${((tagStats.untagged / filteredVoters.length) * 100).toFixed(1)}%`)
+    csvLines.push(`JUMLAH / TOTAL,${filteredVoters.length.toLocaleString()},100.0%`)
+    csvLines.push(`Pengundi Ditag / Tagged Voters,${(filteredVoters.length - tagStats.untagged).toLocaleString()},${(((filteredVoters.length - tagStats.untagged) / filteredVoters.length) * 100).toFixed(1)}%`)
+    csvLines.push('')
+
+    // Summary
+    csvLines.push('RINGKASAN / SUMMARY')
+    csvLines.push('-'.repeat(100))
+    csvLines.push(`Jumlah Pengundi Dieksport / Total Voters Exported:,${filteredVoters.length.toLocaleString()}`)
+    csvLines.push(`Bilangan Kawasan DUN / Number of DUN Areas:,${Object.keys(dunBreakdown).length}`)
+    csvLines.push(`Bilangan Daerah Mengundi / Number of Polling Districts:,${Object.keys(daerahBreakdown).length}`)
+    csvLines.push(`Bilangan Lokaliti / Number of Localities:,${Object.keys(lokalitiBreakdown).length}`)
+    csvLines.push(`Nisbah Lelaki/Perempuan / Male/Female Ratio:,${(maleCount / femaleCount).toFixed(2)}:1`)
+    csvLines.push(`Pengundi Ditag / Tagged Voters:,${(filteredVoters.length - tagStats.untagged).toLocaleString()} (${(((filteredVoters.length - tagStats.untagged) / filteredVoters.length) * 100).toFixed(1)}%)`)
+    csvLines.push(`Umur Purata / Average Age:,${avgAge} tahun / years`)
+    csvLines.push('')
+    csvLines.push('='.repeat(100))
+    csvLines.push('')
+    csvLines.push('')
+
+    // Detailed Voter Data
+    csvLines.push('DATA TERPERINCI PENGUNDI / DETAILED VOTER DATA')
+    csvLines.push('-'.repeat(100))
+    
     const headers = [
       'BIL',
       'NO K/P',
       'NO K/P ID LAIN',
-      'JANTINA',
-      'TAHUN LAHIR',
-      'AGE',
-      'NAMA PEMILIH',
-      'KOD DAERAH MENGUNDI',
-      'DAERAH MENGUNDI',
-      'KOD LOKALITI',
-      'LOKALITI',
+      'JANTINA / GENDER',
+      'TAHUN LAHIR / BIRTH YEAR',
+      'UMUR / AGE',
+      'NAMA PEMILIH / VOTER NAME',
+      'KOD DAERAH / DISTRICT CODE',
+      'DAERAH MENGUNDI / POLLING DISTRICT',
+      'KOD LOKALITI / LOCALITY CODE',
+      'LOKALITI / LOCALITY',
       'DUN',
-      'TAG',
+      'TAG'
     ]
+    csvLines.push(headers.join(','))
 
-    const csvContent = [
-      headers.join(','),
-      ...filteredVoters.map((voter) => {
-        const age = calculateAge(voter.tahun_lahir)
-        return [
-          voter.bil,
-          voter.no_kp,
-          voter.no_kp_id_lain || '',
-          voter.jantina,
-          voter.tahun_lahir,
-          age,
-          `"${voter.nama_pemilih}"`,
-          voter.kod_daerah_mengundi,
-          `"${voter.daerah_mengundi}"`,
-          voter.kod_lokaliti,
-          `"${voter.lokaliti}"`,
-          voter.dun || '',
-          voter.tag || '',
-        ].join(',')
-      }),
-    ].join('\n')
+    filteredVoters.forEach(voter => {
+      const age = calculateAge(voter.tahun_lahir)
+      const row = [
+        voter.bil,
+        voter.no_kp,
+        voter.no_kp_id_lain || '',
+        voter.jantina,
+        voter.tahun_lahir,
+        age,
+        `"${voter.nama_pemilih}"`,
+        voter.kod_daerah_mengundi,
+        `"${voter.daerah_mengundi}"`,
+        voter.kod_lokaliti,
+        `"${voter.lokaliti}"`,
+        voter.dun || '',
+        voter.tag || ''
+      ]
+      csvLines.push(row.join(','))
+    })
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    csvLines.push('')
+    csvLines.push('='.repeat(100))
+    csvLines.push('TAMAT LAPORAN / END OF REPORT')
+    csvLines.push('='.repeat(100))
+
+    // Generate and Download
+    const csvContent = csvLines.join('\n')
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
 
+    const date = new Date().toISOString().slice(0, 10)
+    const dunFilter = filters.dun && filters.dun.length > 0 
+      ? `_${filters.dun[0].replace(/[^a-zA-Z0-9]/g, '_')}` 
+      : user?.dun 
+        ? `_${user.dun.replace(/[^a-zA-Z0-9]/g, '_')}`
+        : ''
+    const filename = `Laporan_Pengundi${dunFilter}_${date}.csv`
+
     link.setAttribute('href', url)
-    link.setAttribute('download', `voters_export_${new Date().toISOString().slice(0, 10)}.csv`)
+    link.setAttribute('download', filename)
     link.style.visibility = 'hidden'
 
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+
+    console.log(`✅ Exported ${filteredVoters.length} voters with detailed summary report`)
+    alert(`✅ Eksport berjaya!\n\nJumlah rekod: ${filteredVoters.length.toLocaleString()}\nFail: ${filename}`)
   }
 
   const indexOfLastItem = currentPage * itemsPerPage
@@ -262,11 +469,16 @@ export default function VotersPage() {
           {/* Statistics */}
           <Statistics voters={filteredVoters} />
 
-          {/* Export Button */}
+          {/* Export Button - ENHANCED */}
           <div className="flex justify-end">
-            <button onClick={exportToCSV} className="btn-primary">
-              <span className="mr-2">📥</span>
-              Export Results
+            <button 
+              onClick={exportToCSVWithSummary} 
+              className="btn-primary flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Eksport dengan Ringkasan / Export with Summary</span>
             </button>
           </div>
 
